@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f4f6f1">
-    <meta name="description" content="Calcule o consumo de combustível e o custo da sua viagem.">
-    <title>Conta de viagem | Calculadora de combustível</title>
+    <meta name="theme-color" content="#edf1e9">
+    <meta name="description" content="Compare o custo por quilômetro da gasolina e do etanol na cidade e na estrada.">
+    <title>Conta de viagem | Comparador de combustível</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="config.js"></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -19,64 +20,82 @@
         <span class="edition">CALCULADORA DE COMBUSTÍVEL</span>
       </header>
 
-      <section class="calculator" aria-labelledby="page-title">
-        <div class="intro">
-          <p class="eyebrow"><span class="eyebrow-line"></span> PLANEJE ANTES DE PARTIR</p>
-          <h1 id="page-title">Quanto custa<br><em>chegar lá?</em></h1>
-          <p class="description">Informe os dados do trajeto para estimar o combustível e o custo da viagem.</p>
+      <section class="comparison" aria-labelledby="page-title">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow"><span class="eyebrow-line"></span> COMPARADOR DE COMBUSTÍVEL</p>
+            <h1 id="page-title">Qual vale<br><em>mais a pena?</em></h1>
+          </div>
+          <p class="description">Compare o custo por quilômetro do seu carro na cidade e na estrada.</p>
         </div>
 
-        <form id="trip-form" class="form-panel">
-          <div class="field">
-            <label for="distance">Distância do trajeto</label>
-            <div class="input-wrap">
-              <input id="distance" name="distance" type="number" min="0.1" step="any" placeholder="Ex.: 320" required>
-              <span>km</span>
+        <div class="workspace">
+          <form id="comparison-form" class="form-panel" novalidate>
+            <div class="fuel-headings" aria-hidden="true">
+              <span></span>
+              <span class="fuel-heading gas-heading"><span class="fuel-dot"></span> Gasolina</span>
+              <span class="fuel-heading ethanol-heading"><span class="fuel-dot"></span> Etanol</span>
             </div>
-          </div>
-          <div class="field">
-            <label for="efficiency">Consumo médio do veículo</label>
-            <div class="input-wrap">
-              <input id="efficiency" name="efficiency" type="number" min="0.1" step="any" placeholder="Ex.: 12" required>
-              <span>km/L</span>
-            </div>
-          </div>
-          <div class="field">
-            <label for="price">Preço do combustível</label>
-            <div class="input-wrap">
-              <span class="prefix">R$</span>
-              <input id="price" name="price" type="number" min="0" step="0.01" placeholder="Ex.: 5,89" required>
-              <span>/L</span>
-            </div>
-          </div>
-          <button type="submit">
-            <span>Calcular viagem</span>
-            <span class="button-arrow" aria-hidden="true">&#8594;</span>
-          </button>
-        </form>
 
-        <section id="result" class="result" aria-live="polite" hidden>
-          <div class="result-heading">
-            <span class="result-label">ESTIMATIVA DO TRAJETO</span>
-            <span class="result-rule"></span>
-          </div>
-          <div class="result-values">
-            <div>
-              <span class="value-label">Combustível necessário</span>
-              <strong id="liters-result">--</strong>
+            <div class="input-row">
+              <label for="gas-city">Consumo na cidade</label>
+              <div class="input-wrap"><input id="gas-city" name="km_per_liter_gas_city" type="number" min="0.1" step="any" inputmode="decimal" placeholder="Ex.: 10,5" aria-label="Consumo de gasolina na cidade"><span>km/L</span></div>
+              <div class="input-wrap"><input id="ethanol-city" name="km_per_liter_alcool_city" type="number" min="0.1" step="any" inputmode="decimal" placeholder="Ex.: 7,2" aria-label="Consumo de etanol na cidade"><span>km/L</span></div>
             </div>
-            <div class="cost-block">
-              <span class="value-label">Custo estimado</span>
-              <strong id="cost-result">--</strong>
+
+            <div class="input-row">
+              <label for="gas-road">Consumo na estrada</label>
+              <div class="input-wrap"><input id="gas-road" name="km_per_liter_gas_highway" type="number" min="0.1" step="any" inputmode="decimal" placeholder="Ex.: 13" aria-label="Consumo de gasolina na estrada"><span>km/L</span></div>
+              <div class="input-wrap"><input id="ethanol-road" name="km_per_liter_alcool_highway" type="number" min="0.1" step="any" inputmode="decimal" placeholder="Ex.: 9" aria-label="Consumo de etanol na estrada"><span>km/L</span></div>
             </div>
-          </div>
-        </section>
-        <p id="form-error" class="form-error" role="alert" hidden></p>
+
+            <div class="price-row">
+              <label for="gas-price">Preço no posto</label>
+              <div class="input-wrap price-input"><span class="prefix">R$</span><input id="gas-price" name="price_per_liter_gas" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Ex.: 5,89" aria-label="Preço da gasolina por litro"><span>/L</span></div>
+              <div class="input-wrap price-input"><span class="prefix">R$</span><input id="ethanol-price" name="price_per_liter_alcool" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Ex.: 3,99" aria-label="Preço do etanol por litro"><span>/L</span></div>
+            </div>
+
+            <button type="submit">
+              <span>Calcular comparação</span>
+              <span class="button-arrow" aria-hidden="true">&#8594;</span>
+            </button>
+            <p id="form-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+          </form>
+
+          <section id="result" class="report" aria-live="polite" aria-labelledby="report-title" hidden>
+            <div class="report-topline">
+              <div>
+                <p class="report-kicker">SEU RESULTADO</p>
+                <h2 id="report-title">Custo por quilômetro</h2>
+              </div>
+              <span class="report-icon" aria-hidden="true">R$</span>
+            </div>
+
+            <section class="report-group" aria-labelledby="city-title">
+              <div class="group-heading"><h3 id="city-title">Cidade</h3><span>R$/km</span></div>
+              <div class="fuel-result" id="gas-city-result"><span class="result-fuel"><span class="fuel-dot gas-dot"></span> Gasolina</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
+              <div class="fuel-result" id="ethanol-city-result"><span class="result-fuel"><span class="fuel-dot ethanol-dot"></span> Etanol</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
+            </section>
+
+            <section class="report-group" aria-labelledby="road-title">
+              <div class="group-heading"><h3 id="road-title">Estrada</h3><span>R$/km</span></div>
+              <div class="fuel-result" id="gas-road-result"><span class="result-fuel"><span class="fuel-dot gas-dot"></span> Gasolina</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
+              <div class="fuel-result" id="ethanol-road-result"><span class="result-fuel"><span class="fuel-dot ethanol-dot"></span> Etanol</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
+            </section>
+            <p class="report-note">O menor custo por quilômetro é a opção mais econômica para cada percurso.</p>
+          </section>
+
+          <section id="report-empty" class="report-empty" aria-label="Relatório ainda não calculado">
+            <span class="empty-mark" aria-hidden="true">↗</span>
+            <p>Seu comparativo aparece aqui</p>
+            <span>Preencha os seis valores para ver o resultado.</span>
+          </section>
+        </div>
       </section>
 
       <footer class="footer">
-        <span>Uma estimativa simples para uma viagem mais tranquila.</span>
-        <span>Consumo real varia conforme o percurso e a condução.</span>
+        <span>Escolha com base no consumo real do seu veículo.</span>
+        <span>Custo por km = preço por litro ÷ consumo em km/L.</span>
       </footer>
     </main>
   </body>

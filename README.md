@@ -21,17 +21,26 @@ pip install -r requirements-dev.txt
 python -m backend.app
 ```
 
-A API ficará disponível em `http://127.0.0.1:5000`. Envie um `POST` para `/api/calculate` com JSON:
+A API ficará disponível em `http://127.0.0.1:5000`. Em outro terminal, inicie um servidor estático para a interface:
+
+```bash
+python -m http.server 8000 --directory docs
+```
+
+Abra `http://127.0.0.1:8000`. O formulário envia os dados ao backend em `http://127.0.0.1:5000/api/calculate`, com este JSON:
 
 ```json
 {
-  "distance_km": 300,
-  "efficiency_km_per_liter": 12,
-  "price_per_liter": 5.99
+  "km_per_liter_gas_city": 10.5,
+  "km_per_liter_gas_highway": 13,
+  "km_per_liter_alcool_city": 7.2,
+  "km_per_liter_alcool_highway": 8.5,
+  "price_per_liter_gas": 5.89,
+  "price_per_liter_alcool": 3.99
 }
 ```
 
-Para abrir a interface sem iniciar o backend, abra `docs/index.html` no navegador.
+A interface envia os valores para a URL definida em `docs/config.js`. Localmente, ela usa `http://127.0.0.1:5000/api/calculate`. Para usar a interface publicada no GitHub Pages, hospede o backend Flask em um serviço com HTTPS e atualize essa URL para o endereço público da API.
 
 ## Testes
 
