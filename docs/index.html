@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f6f1">
+    <meta name="description" content="Calcule o consumo de combustível e o custo da sua viagem.">
+    <title>Conta de viagem | Calculadora de combustível</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="layout">
+      <header class="topbar">
+        <a class="wordmark" href="./" aria-label="Conta de viagem, início">
+          <span class="mark" aria-hidden="true">C</span>
+          <span>conta<span class="wordmark-light">deviagem</span></span>
+        </a>
+        <span class="edition">CALCULADORA DE COMBUSTÍVEL</span>
+      </header>
+
+      <section class="calculator" aria-labelledby="page-title">
+        <div class="intro">
+          <p class="eyebrow"><span class="eyebrow-line"></span> PLANEJE ANTES DE PARTIR</p>
+          <h1 id="page-title">Quanto custa<br><em>chegar lá?</em></h1>
+          <p class="description">Informe os dados do trajeto para estimar o combustível e o custo da viagem.</p>
+        </div>
+
+        <form id="trip-form" class="form-panel">
+          <div class="field">
+            <label for="distance">Distância do trajeto</label>
+            <div class="input-wrap">
+              <input id="distance" name="distance" type="number" min="0.1" step="any" placeholder="Ex.: 320" required>
+              <span>km</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="efficiency">Consumo médio do veículo</label>
+            <div class="input-wrap">
+              <input id="efficiency" name="efficiency" type="number" min="0.1" step="any" placeholder="Ex.: 12" required>
+              <span>km/L</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="price">Preço do combustível</label>
+            <div class="input-wrap">
+              <span class="prefix">R$</span>
+              <input id="price" name="price" type="number" min="0" step="0.01" placeholder="Ex.: 5,89" required>
+              <span>/L</span>
+            </div>
+          </div>
+          <button type="submit">
+            <span>Calcular viagem</span>
+            <span class="button-arrow" aria-hidden="true">&#8594;</span>
+          </button>
+        </form>
+
+        <section id="result" class="result" aria-live="polite" hidden>
+          <div class="result-heading">
+            <span class="result-label">ESTIMATIVA DO TRAJETO</span>
+            <span class="result-rule"></span>
+          </div>
+          <div class="result-values">
+            <div>
+              <span class="value-label">Combustível necessário</span>
+              <strong id="liters-result">--</strong>
+            </div>
+            <div class="cost-block">
+              <span class="value-label">Custo estimado</span>
+              <strong id="cost-result">--</strong>
+            </div>
+          </div>
+        </section>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+      </section>
+
+      <footer class="footer">
+        <span>Uma estimativa simples para uma viagem mais tranquila.</span>
+        <span>Consumo real varia conforme o percurso e a condução.</span>
+      </footer>
+    </main>
+  </body>
+</html>
