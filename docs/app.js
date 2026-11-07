@@ -7,6 +7,9 @@ const FIELD_NAMES = [
   "price_per_liter_alcool",
 ];
 
+const STORAGE_KEY = "gas-calculator:inputs:v1";
+const PERSISTED_FIELD_NAMES = FIELD_NAMES.slice(0, 4);
+
 const DECIMAL_PLACES = {
   km_per_liter_gas_city: 1,
   km_per_liter_gas_highway: 1,
@@ -92,6 +95,7 @@ export function initializeCalculator(document) {
   const emptyReport = document.querySelector("#report-empty");
   const errorMessage = document.querySelector("#form-error");
   const unitButtons = document.querySelectorAll("[data-result-unit]");
+  const storage = getLocalStorage(document);
   const currencyFormat = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -104,6 +108,10 @@ export function initializeCalculator(document) {
   });
   let resultData = null;
   let resultUnit = "cost";
+
+  restoreFormValues(form, storage);
+  saveFormValues(form, storage);
+  form.addEventListener("input", () => saveFormValues(form, storage));
 
   Object.entries(DECIMAL_PLACES).forEach(([name, decimalPlaces]) => {
     const input = form.elements.namedItem(name);
@@ -130,6 +138,7 @@ export function initializeCalculator(document) {
       Object.entries(DECIMAL_PLACES).forEach(([name, decimalPlaces]) => {
         applyImpliedDecimal(form.elements.namedItem(name), decimalPlaces);
       });
+      saveFormValues(form, storage);
       const values = FIELD_NAMES.map((name) => {
         const rawValue = form.elements.namedItem(name).value.trim();
         if (rawValue === "") throw new TypeError("Preencha os seis campos com valores numéricos.");
@@ -162,6 +171,45 @@ export function initializeCalculator(document) {
       errorMessage.hidden = false;
     }
   });
+}
+
+function getLocalStorage(document) {
+  try {
+    return document.defaultView?.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function restoreFormValues(form, storage) {
+  if (!storage) return;
+
+  try {
+    const savedValues = JSON.parse(storage.getItem(STORAGE_KEY) || "null");
+    if (!savedValues || typeof savedValues !== "object" || Array.isArray(savedValues)) return;
+
+    PERSISTED_FIELD_NAMES.forEach((name) => {
+      if (typeof savedValues[name] !== "string") return;
+      const input = form.elements.namedItem(name);
+      input.value = savedValues[name];
+      applyImpliedDecimal(input, DECIMAL_PLACES[name]);
+    });
+  } catch {
+    // Ignore unavailable storage and malformed saved data.
+  }
+}
+
+function saveFormValues(form, storage) {
+  if (!storage) return;
+
+  try {
+    const values = Object.fromEntries(
+      PERSISTED_FIELD_NAMES.map((name) => [name, form.elements.namedItem(name).value]),
+    );
+    storage.setItem(STORAGE_KEY, JSON.stringify(values));
+  } catch {
+    // The calculator remains usable when browser storage is unavailable.
+  }
 }
 
 function applyImpliedDecimal(input, decimalPlaces) {

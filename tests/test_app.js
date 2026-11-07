@@ -7,9 +7,11 @@ import { calculateCost, calculateWinners, initializeCalculator } from "../docs/a
 
 const html = readFileSync(new URL("../docs/index.html", import.meta.url), "utf8");
 const validValues = [10.5, 13, 7.2, 8.5, 5.89, 3.99];
+const storageKey = "gas-calculator:inputs:v1";
 
-function createCalculator() {
-  const dom = new JSDOM(html);
+function createCalculator(savedValues = null) {
+  const dom = new JSDOM(html, { url: "https://gas-calculator.test/" });
+  if (savedValues !== null) dom.window.localStorage.setItem(storageKey, savedValues);
   initializeCalculator(dom.window.document);
   return dom;
 }
@@ -24,7 +26,12 @@ function fillForm(dom, values = validValues) {
     "price_per_liter_alcool",
   ];
   names.forEach((name, index) => {
-    dom.window.document.querySelector(`[name="${name}"]`).value = values[index];
+    const value = values[index];
+    const decimalPlaces = index < 4 ? 1 : 2;
+    const inputValue = typeof value === "number"
+      ? value.toFixed(decimalPlaces).replace(".", ",")
+      : value;
+    dom.window.document.querySelector(`[name="${name}"]`).value = inputValue;
   });
 }
 
@@ -143,6 +150,55 @@ test("form submission calculates correctly from digit-only entries", () => {
   );
   assert.equal(document.querySelector("#gas-city-result strong").textContent, "R$ 0,56");
   assert.equal(document.querySelector("#result").hidden, false);
+});
+
+test("entered values persist and are restored in a future session", () => {
+  const firstSession = createCalculator();
+  fillForm(firstSession);
+  firstSession.window.document.querySelectorAll("#comparison-form input").forEach((input) => {
+    input.dispatchEvent(new firstSession.window.Event("input", { bubbles: true }));
+  });
+  const savedValues = firstSession.window.localStorage.getItem(storageKey);
+  assert.deepEqual(JSON.parse(savedValues), {
+    km_per_liter_gas_city: "10,5",
+    km_per_liter_gas_highway: "13,0",
+    km_per_liter_alcool_city: "7,2",
+    km_per_liter_alcool_highway: "8,5",
+  });
+
+  const nextSession = createCalculator(savedValues);
+  assert.deepEqual(
+    [...nextSession.window.document.querySelectorAll("#comparison-form input")].map((input) => input.value),
+    ["10,5", "7,2", "13,0", "8,5", "", ""],
+  );
+});
+
+test("previously saved fuel prices are removed when a session is restored", () => {
+  const legacyValues = JSON.stringify({
+    km_per_liter_gas_city: "10,5",
+    km_per_liter_gas_highway: "13,0",
+    km_per_liter_alcool_city: "7,2",
+    km_per_liter_alcool_highway: "8,5",
+    price_per_liter_gas: "5,89",
+    price_per_liter_alcool: "3,99",
+  });
+  const dom = createCalculator(legacyValues);
+  const form = dom.window.document.querySelector("#comparison-form");
+
+  assert.equal(form.elements.namedItem("price_per_liter_gas").value, "");
+  assert.equal(form.elements.namedItem("price_per_liter_alcool").value, "");
+  assert.deepEqual(JSON.parse(dom.window.localStorage.getItem(storageKey)), {
+    km_per_liter_gas_city: "10,5",
+    km_per_liter_gas_highway: "13,0",
+    km_per_liter_alcool_city: "7,2",
+    km_per_liter_alcool_highway: "8,5",
+  });
+});
+
+test("malformed saved values do not prevent the calculator from initializing", () => {
+  const dom = createCalculator("not valid JSON");
+
+  assert.equal(dom.window.document.querySelector("#comparison-form").elements.namedItem("km_per_liter_gas_city").value, "");
 });
 
 test("the report switches between cost and distance units without changing winners", () => {
