@@ -7,6 +7,15 @@ const FIELD_NAMES = [
   "price_per_liter_alcool",
 ];
 
+const DECIMAL_PLACES = {
+  km_per_liter_gas_city: 1,
+  km_per_liter_gas_highway: 1,
+  km_per_liter_alcool_city: 1,
+  km_per_liter_alcool_highway: 1,
+  price_per_liter_gas: 2,
+  price_per_liter_alcool: 2,
+};
+
 const REPORT_ROWS = [
   { id: "gas-city-result", cost: "cost_per_km_gas_city", distance: "km_per_real_gas_city" },
   { id: "ethanol-city-result", cost: "cost_per_km_alcool_city", distance: "km_per_real_alcool_city" },
@@ -96,6 +105,16 @@ export function initializeCalculator(document) {
   let resultData = null;
   let resultUnit = "cost";
 
+  Object.entries(DECIMAL_PLACES).forEach(([name, decimalPlaces]) => {
+    const input = form.elements.namedItem(name);
+    const formatInput = () => applyImpliedDecimal(input, decimalPlaces);
+    input.addEventListener("click", () => {
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+    input.addEventListener("input", formatInput);
+    input.addEventListener("blur", formatInput);
+  });
+
   unitButtons.forEach((button) => {
     button.addEventListener("click", () => {
       resultUnit = button.dataset.resultUnit;
@@ -108,10 +127,13 @@ export function initializeCalculator(document) {
     errorMessage.hidden = true;
 
     try {
+      Object.entries(DECIMAL_PLACES).forEach(([name, decimalPlaces]) => {
+        applyImpliedDecimal(form.elements.namedItem(name), decimalPlaces);
+      });
       const values = FIELD_NAMES.map((name) => {
         const rawValue = form.elements.namedItem(name).value.trim();
         if (rawValue === "") throw new TypeError("Preencha os seis campos com valores numéricos.");
-        return Number(rawValue);
+        return Number(rawValue.replace(",", "."));
       });
       const costs = calculateCost(...values);
       const winners = calculateWinners(
@@ -140,6 +162,21 @@ export function initializeCalculator(document) {
       errorMessage.hidden = false;
     }
   });
+}
+
+function applyImpliedDecimal(input, decimalPlaces) {
+  const rawValue = input.value.trim();
+  const negativeSign = rawValue.startsWith("-") ? "-" : "";
+  const digits = rawValue.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  if (!digits) {
+    input.value = negativeSign;
+    return;
+  }
+
+  const paddedDigits = digits.padStart(decimalPlaces + 1, "0");
+  const decimalIndex = paddedDigits.length - decimalPlaces;
+  input.value = `${negativeSign}${paddedDigits.slice(0, decimalIndex)},${paddedDigits.slice(decimalIndex)}`;
+  input.setSelectionRange(input.value.length, input.value.length);
 }
 
 function showResults(document, currencyFormat, distanceFormat, data, unit) {

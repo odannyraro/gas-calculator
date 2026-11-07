@@ -96,6 +96,55 @@ test("form submission renders costs and highlights each winner", () => {
   assert.equal(document.querySelector("#form-error").hidden, true);
 });
 
+test("typing digits immediately displays the implied decimal places", () => {
+  const dom = createCalculator();
+  const document = dom.window.document;
+  const consumption = document.querySelector('[name="km_per_liter_gas_city"]');
+  const price = document.querySelector('[name="price_per_liter_gas"]');
+  const explicitDecimal = document.querySelector('[name="km_per_liter_gas_highway"]');
+
+  for (const digit of "105") {
+    consumption.value += digit;
+    consumption.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  }
+  for (const digit of "589") {
+    price.value += digit;
+    price.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  }
+  explicitDecimal.value = "13.0";
+  explicitDecimal.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+  assert.equal(consumption.value, "10,5");
+  assert.equal(price.value, "5,89");
+  assert.equal(explicitDecimal.value, "13,0");
+});
+
+test("clicking a populated field places the caret at the end", () => {
+  const dom = createCalculator();
+  const consumption = dom.window.document.querySelector('[name="km_per_liter_gas_city"]');
+  consumption.value = "10,5";
+  consumption.setSelectionRange(1, 1);
+  consumption.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+
+  assert.equal(consumption.selectionStart, consumption.value.length);
+  assert.equal(consumption.selectionEnd, consumption.value.length);
+});
+
+test("form submission calculates correctly from digit-only entries", () => {
+  const dom = createCalculator();
+  const digitOnlyValues = ["105", "130", "72", "85", "589", "399"];
+  fillForm(dom, digitOnlyValues);
+  submitForm(dom);
+
+  const document = dom.window.document;
+  assert.deepEqual(
+    [...document.querySelectorAll("#comparison-form input")].map((input) => input.value),
+    ["10,5", "7,2", "13,0", "8,5", "5,89", "3,99"],
+  );
+  assert.equal(document.querySelector("#gas-city-result strong").textContent, "R$ 0,56");
+  assert.equal(document.querySelector("#result").hidden, false);
+});
+
 test("the report switches between cost and distance units without changing winners", () => {
   const dom = createCalculator();
   fillForm(dom);
