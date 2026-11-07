@@ -96,6 +96,52 @@ test("form submission renders costs and highlights each winner", () => {
   assert.equal(document.querySelector("#form-error").hidden, true);
 });
 
+test("the report switches between cost and distance units without changing winners", () => {
+  const dom = createCalculator();
+  fillForm(dom);
+  submitForm(dom);
+
+  const document = dom.window.document;
+  const costButton = document.querySelector('[data-result-unit="cost"]');
+  const distanceButton = document.querySelector('[data-result-unit="distance"]');
+  assert.equal(costButton.getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelector("#gas-city-result strong").textContent, "R$ 0,56");
+
+  distanceButton.click();
+  assert.equal(document.querySelector("#report-title").textContent, "Distância por real");
+  assert.equal(document.querySelector("#gas-city-result strong").textContent, "1,78");
+  assert.equal(document.querySelector("#ethanol-city-result strong").textContent, "1,80");
+  assert.equal(document.querySelector("#city-title + .result-unit").textContent, "km/R$");
+  assert.equal(document.querySelector("#gas-road-result strong").textContent, "2,21");
+  assert.equal(document.querySelector("#ethanol-road-result strong").textContent, "2,13");
+  assert.equal(document.querySelector("#road-title + .result-unit").textContent, "km/R$");
+  assert.match(document.querySelector("#report-note").textContent, /maior distância por real/i);
+  assert.equal(distanceButton.getAttribute("aria-pressed"), "true");
+  assert.equal(costButton.getAttribute("aria-pressed"), "false");
+  assert.equal(document.querySelector("#ethanol-city-result").classList.contains("winner"), true);
+  assert.equal(document.querySelector("#gas-road-result").classList.contains("winner"), true);
+
+  costButton.click();
+  assert.equal(document.querySelector("#report-title").textContent, "Custo por quilômetro");
+  assert.equal(document.querySelector("#gas-city-result strong").textContent, "R$ 0,56");
+  assert.equal(document.querySelector("#city-title + .result-unit").textContent, "R$/km");
+  assert.equal(document.querySelector("#road-title + .result-unit").textContent, "R$/km");
+  assert.match(document.querySelector("#report-note").textContent, /menor custo por quilômetro/i);
+  assert.equal(costButton.getAttribute("aria-pressed"), "true");
+  assert.equal(distanceButton.getAttribute("aria-pressed"), "false");
+});
+
+test("the distance view remains available when a fuel is free", () => {
+  const dom = createCalculator();
+  const values = [...validValues];
+  values[4] = "0";
+  fillForm(dom, values);
+  submitForm(dom);
+  dom.window.document.querySelector('[data-result-unit="distance"]').click();
+
+  assert.equal(dom.window.document.querySelector("#gas-city-result strong").textContent, "∞");
+});
+
 for (const [id, index, value] of [
   ["zero-consumption", 0, "0"],
   ["negative-price", 4, "-1"],

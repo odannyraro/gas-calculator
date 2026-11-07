@@ -64,25 +64,29 @@
 
           <section id="result" class="report" aria-live="polite" aria-labelledby="report-title" hidden>
             <div class="report-topline">
-              <div>
+              <div class="report-heading">
                 <p class="report-kicker">SEU RESULTADO</p>
                 <h2 id="report-title">Custo por quilômetro</h2>
               </div>
               <span class="report-icon" aria-hidden="true">R$</span>
+              <div class="unit-toggle" role="group" aria-label="Unidade dos resultados">
+                <button type="button" data-result-unit="cost" aria-pressed="true">R$/km</button>
+                <button type="button" data-result-unit="distance" aria-pressed="false">km/R$</button>
+              </div>
             </div>
 
             <section class="report-group" aria-labelledby="city-title">
-              <div class="group-heading"><h3 id="city-title">Cidade</h3><span>R$/km</span></div>
+              <div class="group-heading"><h3 id="city-title">Cidade</h3><span class="result-unit">R$/km</span></div>
               <div class="fuel-result" id="gas-city-result"><span class="result-fuel"><span class="fuel-dot gas-dot"></span> Gasolina</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
               <div class="fuel-result" id="ethanol-city-result"><span class="result-fuel"><span class="fuel-dot ethanol-dot"></span> Etanol</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
             </section>
 
             <section class="report-group" aria-labelledby="road-title">
-              <div class="group-heading"><h3 id="road-title">Estrada</h3><span>R$/km</span></div>
+              <div class="group-heading"><h3 id="road-title">Estrada</h3><span class="result-unit">R$/km</span></div>
               <div class="fuel-result" id="gas-road-result"><span class="result-fuel"><span class="fuel-dot gas-dot"></span> Gasolina</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
               <div class="fuel-result" id="ethanol-road-result"><span class="result-fuel"><span class="fuel-dot ethanol-dot"></span> Etanol</span><strong></strong><span class="winner-label" hidden>MAIS ECONÔMICO</span></div>
             </section>
-            <p class="report-note">O menor custo por quilômetro é a opção mais econômica para cada percurso.</p>
+            <p id="report-note" class="report-note">O menor custo por quilômetro é a opção mais econômica para cada percurso.</p>
           </section>
 
           <section id="report-empty" class="report-empty" aria-label="Relatório ainda não calculado">

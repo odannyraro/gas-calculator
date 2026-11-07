@@ -208,9 +208,14 @@ body { background-image: linear-gradient(115deg, #edf1e9 0%, #f6f7f1 52%, #e8eee
 .form-error { margin: 10px 0 0; color: var(--error); font-size: 12px; line-height: 1.4; }
 .report, .report-empty { min-height: 100%; padding: 25px; border: 1px solid #dce2da; background: #fff; box-shadow: 0 14px 36px #26392b0b; }
 .report { animation: arrive 250ms ease-out both; }
-.report-topline { display: flex; align-items: center; justify-content: space-between; padding-bottom: 19px; border-bottom: 1px solid var(--line); }
-.report-kicker { margin: 0 0 7px; color: var(--green); font-size: 9px; font-weight: 800; letter-spacing: 1.2px; }
-.report h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 500; }
+.report-topline { display: grid; align-items: center; grid-template-columns: minmax(0, 1fr) 38px; column-gap: 12px; row-gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.report-heading { display: grid; justify-items: start; gap: 5px; }
+.report-kicker { margin: 0 0 4px; color: var(--green); font-size: 9px; font-weight: 800; letter-spacing: 1.2px; }
+.report h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 20px; font-weight: 500; }
+.unit-toggle { display: flex; grid-column: 1 / -1; width: 100%; box-sizing: border-box; gap: 2px; padding: 2px; border: 1px solid #dce2da; background: #f5f7f3; }
+.unit-toggle button { min-height: 24px; flex: 1; justify-content: center; margin: 0; padding: 2px 9px; border: 0; color: var(--muted); background: transparent; font: inherit; font-size: 10px; font-weight: 750; cursor: pointer; }
+.unit-toggle button[aria-pressed="true"] { color: #fff; background: var(--green); }
+.unit-toggle button:focus-visible { outline: 2px solid var(--gas); outline-offset: 2px; }
 .report-icon { display: grid; width: 38px; aspect-ratio: 1; place-items: center; border-radius: 50%; color: var(--green); background: #e9f0e8; font-family: Georgia, serif; font-size: 13px; }
 .report-group { margin-top: 20px; }
 .group-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }

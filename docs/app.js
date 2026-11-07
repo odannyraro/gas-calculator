@@ -8,10 +8,10 @@ const FIELD_NAMES = [
 ];
 
 const REPORT_ROWS = [
-  { id: "gas-city-result", value: "cost_per_km_gas_city" },
-  { id: "ethanol-city-result", value: "cost_per_km_alcool_city" },
-  { id: "gas-road-result", value: "cost_per_km_gas_highway" },
-  { id: "ethanol-road-result", value: "cost_per_km_alcool_highway" },
+  { id: "gas-city-result", cost: "cost_per_km_gas_city", distance: "km_per_real_gas_city" },
+  { id: "ethanol-city-result", cost: "cost_per_km_alcool_city", distance: "km_per_real_alcool_city" },
+  { id: "gas-road-result", cost: "cost_per_km_gas_highway", distance: "km_per_real_gas_highway" },
+  { id: "ethanol-road-result", cost: "cost_per_km_alcool_highway", distance: "km_per_real_alcool_highway" },
 ];
 
 export function calculateCost(
@@ -82,11 +82,25 @@ export function initializeCalculator(document) {
   const result = document.querySelector("#result");
   const emptyReport = document.querySelector("#report-empty");
   const errorMessage = document.querySelector("#form-error");
+  const unitButtons = document.querySelectorAll("[data-result-unit]");
   const currencyFormat = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+  });
+  const distanceFormat = new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  let resultData = null;
+  let resultUnit = "cost";
+
+  unitButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      resultUnit = button.dataset.resultUnit;
+      if (resultData) showResults(document, currencyFormat, distanceFormat, resultData, resultUnit);
+    });
   });
 
   form.addEventListener("submit", (event) => {
@@ -107,10 +121,19 @@ export function initializeCalculator(document) {
         costs.cost_per_km_alcool_highway,
       );
 
-      showResults(document, currencyFormat, { ...costs, ...winners });
+      resultData = {
+        ...costs,
+        ...winners,
+        km_per_real_gas_city: values[0] / values[4],
+        km_per_real_gas_highway: values[1] / values[4],
+        km_per_real_alcool_city: values[2] / values[5],
+        km_per_real_alcool_highway: values[3] / values[5],
+      };
+      showResults(document, currencyFormat, distanceFormat, resultData, resultUnit);
       emptyReport.hidden = true;
       result.hidden = false;
     } catch (error) {
+      resultData = null;
       result.hidden = true;
       emptyReport.hidden = false;
       errorMessage.textContent = error.message;
@@ -119,12 +142,31 @@ export function initializeCalculator(document) {
   });
 }
 
-function showResults(document, currencyFormat, data) {
-  REPORT_ROWS.forEach(({ id, value }) => {
+function showResults(document, currencyFormat, distanceFormat, data, unit) {
+  const showingCost = unit === "cost";
+  const unitLabel = showingCost ? "R$/km" : "km/R$";
+  REPORT_ROWS.forEach(({ id, cost, distance }) => {
     const row = document.querySelector(`#${id}`);
-    row.querySelector("strong").textContent = currencyFormat.format(data[value]);
+    const value = showingCost ? data[cost] : data[distance];
+    row.querySelector("strong").textContent = showingCost
+      ? currencyFormat.format(value)
+      : distanceFormat.format(value);
     row.classList.remove("winner");
     row.querySelector(".winner-label").hidden = true;
+  });
+
+  document.querySelectorAll(".result-unit").forEach((label) => {
+    label.textContent = unitLabel;
+  });
+  document.querySelector("#report-title").textContent = showingCost
+    ? "Custo por quilômetro"
+    : "Distância por real";
+  document.querySelector("#report-note").textContent = showingCost
+    ? "O menor custo por quilômetro é a opção mais econômica para cada percurso."
+    : "A maior distância por real é a opção mais econômica para cada percurso.";
+  document.querySelector(".report-icon").textContent = showingCost ? "R$" : "km";
+  document.querySelectorAll("[data-result-unit]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.resultUnit === unit));
   });
 
   markWinner(document, data.winner_city === "Gasolina" ? "gas-city-result" : "ethanol-city-result");
