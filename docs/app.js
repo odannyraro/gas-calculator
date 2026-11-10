@@ -87,11 +87,68 @@ export function calculateWinners(
   };
 }
 
+export function calculateTrip(
+  kmPerLiterGasCity,
+  kmPerLiterGasHighway,
+  kmPerLiterAlcoolCity,
+  kmPerLiterAlcoolHighway,
+  pricePerLiterGas,
+  pricePerLiterAlcool,
+  distanceKm,
+  tankCapacityLiters,
+) {
+  const tripValues = [distanceKm, tankCapacityLiters];
+  if (tripValues.some((value) => typeof value !== "number" || !Number.isFinite(value))) {
+    throw new TypeError("Distância e capacidade do tanque devem ser números finitos.");
+  }
+  if (distanceKm <= 0 || tankCapacityLiters <= 0) {
+    throw new RangeError("Distância e capacidade do tanque devem ser maiores que zero.");
+  }
+
+  const efficiencies = [
+    kmPerLiterGasCity,
+    kmPerLiterGasHighway,
+    kmPerLiterAlcoolCity,
+    kmPerLiterAlcoolHighway,
+  ];
+  const prices = [pricePerLiterGas, pricePerLiterAlcool];
+  const costData = calculateCost(...efficiencies, ...prices);
+  const scenarios = [
+    { fuel: "Gasolina", route: "Cidade", efficiency: kmPerLiterGasCity, price: pricePerLiterGas },
+    { fuel: "Gasolina", route: "Estrada", efficiency: kmPerLiterGasHighway, price: pricePerLiterGas },
+    { fuel: "Etanol", route: "Cidade", efficiency: kmPerLiterAlcoolCity, price: pricePerLiterAlcool },
+    { fuel: "Etanol", route: "Estrada", efficiency: kmPerLiterAlcoolHighway, price: pricePerLiterAlcool },
+  ].map(({ fuel, route, efficiency, price }) => {
+    const liters = distanceKm / efficiency;
+    return {
+      fuel,
+      route,
+      liters,
+      cost: liters * price,
+      tank_equivalents: liters / tankCapacityLiters,
+      full_tanks_required: Math.ceil(liters / tankCapacityLiters),
+      refuel_stops_if_full: Math.max(0, Math.ceil(liters / tankCapacityLiters) - 1),
+    };
+  });
+
+  if (scenarios.some(({ liters, cost, tank_equivalents }) =>
+    !Number.isFinite(liters) || !Number.isFinite(cost) || !Number.isFinite(tank_equivalents))) {
+    throw new RangeError("Os valores informados geram uma estimativa fora do intervalo permitido.");
+  }
+
+  return { distance_km: distanceKm, tank_capacity_liters: tankCapacityLiters, ...costData, scenarios };
+}
+
 export function initializeCalculator(document) {
   const form = document.querySelector("#comparison-form");
   if (!form) return;
 
   const result = document.querySelector("#result");
+  const tripForm = document.querySelector("#trip-form");
+  const tripResult = document.querySelector("#trip-result");
+  const tripError = document.querySelector("#trip-error");
+  const tripSubmit = document.querySelector("#trip-submit");
+  const comparisonSubmit = form.querySelector('button[type="submit"]');
   const emptyReport = document.querySelector("#report-empty");
   const errorMessage = document.querySelector("#form-error");
   const unitButtons = document.querySelectorAll("[data-result-unit]");
@@ -112,6 +169,9 @@ export function initializeCalculator(document) {
   restoreFormValues(form, storage);
   saveFormValues(form, storage);
   form.addEventListener("input", () => saveFormValues(form, storage));
+  form.addEventListener("input", updateTripAvailability);
+  form.addEventListener("input", updateComparisonAvailability);
+  tripForm.addEventListener("input", updateTripAvailability);
 
   Object.entries(DECIMAL_PLACES).forEach(([name, decimalPlaces]) => {
     const input = form.elements.namedItem(name);
@@ -128,6 +188,35 @@ export function initializeCalculator(document) {
       resultUnit = button.dataset.resultUnit;
       if (resultData) showResults(document, currencyFormat, distanceFormat, resultData, resultUnit);
     });
+  });
+
+  updateTripAvailability();
+  updateComparisonAvailability();
+
+  tripForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    tripError.hidden = true;
+    form.requestSubmit();
+
+    if (!resultData) {
+      tripResult.hidden = true;
+      tripError.textContent = errorMessage.textContent || "Confira os dados de consumo e preço antes de calcular a viagem.";
+      tripError.hidden = false;
+      return;
+    }
+
+    try {
+      const values = FIELD_NAMES.map((name) => readNumericField(form.elements.namedItem(name), name));
+      const distanceKm = readNumericField(tripForm.elements.namedItem("trip_distance_km"), "distância");
+      const tankCapacity = readNumericField(tripForm.elements.namedItem("tank_capacity_liters"), "tanque");
+      const trip = calculateTrip(...values, distanceKm, tankCapacity);
+      renderTripResults(document, trip, currencyFormat, distanceFormat);
+      tripResult.hidden = false;
+    } catch (error) {
+      tripResult.hidden = true;
+      tripError.textContent = error.message;
+      tripError.hidden = false;
+    }
   });
 
   form.addEventListener("submit", (event) => {
@@ -161,6 +250,7 @@ export function initializeCalculator(document) {
         km_per_real_alcool_highway: values[3] / values[5],
       };
       showResults(document, currencyFormat, distanceFormat, resultData, resultUnit);
+      tripResult.hidden = true;
       emptyReport.hidden = true;
       result.hidden = false;
     } catch (error) {
@@ -170,6 +260,78 @@ export function initializeCalculator(document) {
       errorMessage.textContent = error.message;
       errorMessage.hidden = false;
     }
+  });
+
+  function updateTripAvailability() {
+    const allValues = [
+      ...FIELD_NAMES.map((name) => form.elements.namedItem(name)),
+      tripForm.elements.namedItem("trip_distance_km"),
+      tripForm.elements.namedItem("tank_capacity_liters"),
+    ];
+    const isValid = allValues.every((input, index) => {
+      const value = Number(input.value.trim().replace(",", "."));
+      if (input.value.trim() === "" || !Number.isFinite(value)) return false;
+      if (index < 4) return value > 0;
+      if (index < 6) return value >= 0;
+      return value > 0;
+    });
+    tripSubmit.setAttribute("aria-disabled", String(!isValid));
+    if (isValid) tripError.hidden = true;
+  }
+
+  function updateComparisonAvailability() {
+    const values = FIELD_NAMES.map((name) => form.elements.namedItem(name));
+    const isValid = values.every((input, index) => {
+      const rawValue = input.value.trim();
+      const value = Number(rawValue.replace(",", "."));
+      if (rawValue === "" || !Number.isFinite(value)) return false;
+      if (index < 4) return value > 0;
+      return value >= 0;
+    });
+    comparisonSubmit.setAttribute("aria-disabled", String(!isValid));
+    if (isValid) errorMessage.hidden = true;
+  }
+}
+
+function readNumericField(input, label) {
+  const rawValue = input.value.trim().replace(",", ".");
+  if (rawValue === "") throw new TypeError(`Preencha o campo ${label}.`);
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) throw new TypeError(`Informe um valor válido para ${label}.`);
+  return value;
+}
+
+function renderTripResults(document, trip, currencyFormat, numberFormat) {
+  document.querySelector("#trip-distance-summary").textContent =
+    `${numberFormat.format(trip.distance_km)} km de percurso · tanque de ${numberFormat.format(trip.tank_capacity_liters)} L`;
+  const scenarios = document.querySelector("#trip-scenarios");
+  scenarios.replaceChildren();
+
+  trip.scenarios.forEach((scenario) => {
+    const article = document.createElement("article");
+    article.className = "trip-scenario";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `${scenario.fuel} · ${scenario.route}`;
+
+    const values = document.createElement("dl");
+    const items = [
+      ["Combustível", `${numberFormat.format(scenario.liters)} L`],
+      ["Custo estimado", currencyFormat.format(scenario.cost)],
+      ["Tanques equivalentes", numberFormat.format(scenario.tank_equivalents)],
+      ["Paradas para abastecer*", String(scenario.refuel_stops_if_full)],
+    ];
+
+    items.forEach(([label, value]) => {
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const description = document.createElement("dd");
+      description.textContent = value;
+      values.append(term, description);
+    });
+
+    article.append(heading, values);
+    scenarios.append(article);
   });
 }
 

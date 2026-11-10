@@ -30,7 +30,8 @@
         </div>
 
         <div class="workspace">
-          <form id="comparison-form" class="form-panel" novalidate>
+          <div class="input-column">
+            <form id="comparison-form" class="form-panel" novalidate>
             <div class="fuel-headings" aria-hidden="true">
               <span></span>
               <span class="fuel-heading gas-heading"><span class="fuel-dot"></span> Gasolina</span>
@@ -55,13 +56,41 @@
               <div class="input-wrap price-input"><span class="prefix">R$</span><input id="ethanol-price" name="price_per_liter_alcool" type="text" inputmode="decimal" placeholder="Ex.: 3,99" aria-label="Preço do etanol por litro"><span>/L</span></div>
             </div>
 
-            <button type="submit">
+            <button type="submit" aria-disabled="true">
               <span>Calcular comparação</span>
               <span class="button-arrow" aria-hidden="true">&#8594;</span>
             </button>
             <p id="form-error" class="form-error" role="alert" aria-live="polite" hidden></p>
-          </form>
+            </form>
 
+            <form id="trip-form" class="trip-panel" novalidate>
+              <div class="trip-heading">
+                <div>
+                  <p class="report-kicker">ESTIMATIVA DE VIAGEM</p>
+                  <h2>Planeje seu trajeto</h2>
+                </div>
+                <span class="trip-icon" aria-hidden="true">↗</span>
+              </div>
+              <div class="trip-fields">
+                <div class="field">
+                  <label for="trip-distance">Distância da viagem</label>
+                  <div class="input-wrap"><input id="trip-distance" name="trip_distance_km" type="text" inputmode="decimal" placeholder="Ex.: 320" aria-label="Distância da viagem em quilômetros"><span>km</span></div>
+                </div>
+                <div class="field">
+                  <label for="tank-capacity">Capacidade do tanque</label>
+                  <div class="input-wrap"><input id="tank-capacity" name="tank_capacity_liters" type="text" inputmode="decimal" placeholder="Ex.: 50" aria-label="Capacidade do tanque em litros"><span>L</span></div>
+                </div>
+              </div>
+              <button id="trip-submit" type="submit" aria-disabled="true">
+                <span>Calcular viagem</span>
+                <span class="button-arrow" aria-hidden="true">&#8594;</span>
+              </button>
+              <p id="trip-hint" class="trip-hint">Preencha os seis dados de consumo e preço, além da distância e do tanque.</p>
+              <p id="trip-error" class="form-error" role="alert" aria-live="polite" hidden></p>
+            </form>
+          </div>
+
+          <div class="report-column">
           <section id="result" class="report" aria-live="polite" aria-labelledby="report-title" hidden>
             <div class="report-topline">
               <div class="report-heading">
@@ -94,6 +123,19 @@
             <p>Seu comparativo aparece aqui</p>
             <span>Preencha os seis valores para ver o resultado.</span>
           </section>
+          <section id="trip-result" class="trip-report" aria-live="polite" aria-labelledby="trip-result-title" hidden>
+            <div class="trip-heading">
+              <div>
+                <p class="report-kicker">RESUMO DO PERCURSO</p>
+                <h2 id="trip-result-title">Combustível para a viagem</h2>
+              </div>
+              <span class="trip-icon" aria-hidden="true">km</span>
+            </div>
+            <p id="trip-distance-summary" class="trip-distance-summary"></p>
+            <div id="trip-scenarios" class="trip-scenarios"></div>
+            <p class="report-note">*Estimativa de paradas partindo com o tanque cheio. O consumo pode variar conforme o percurso e a condução.</p>
+          </section>
+          </div>
         </div>
       </section>
 

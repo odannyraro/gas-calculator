@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 
-import { calculateCost, calculateWinners, initializeCalculator } from "../docs/app.js";
+import { calculateCost, calculateTrip, calculateWinners, initializeCalculator } from "../docs/app.js";
 
 const html = readFileSync(new URL("../docs/index.html", import.meta.url), "utf8");
 const validValues = [10.5, 13, 7.2, 8.5, 5.89, 3.99];
@@ -38,6 +38,19 @@ function fillForm(dom, values = validValues) {
 function submitForm(dom) {
   const event = new dom.window.Event("submit", { bubbles: true, cancelable: true });
   dom.window.document.querySelector("#comparison-form").dispatchEvent(event);
+}
+
+function fillTripInputs(dom, distance = "320", tankCapacity = "50") {
+  const document = dom.window.document;
+  document.querySelector('[name="trip_distance_km"]').value = distance;
+  document.querySelector('[name="tank_capacity_liters"]').value = tankCapacity;
+  document.querySelector('[name="trip_distance_km"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  document.querySelector('[name="tank_capacity_liters"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+}
+
+function submitTripForm(dom) {
+  const event = new dom.window.Event("submit", { bubbles: true, cancelable: true });
+  dom.window.document.querySelector("#trip-form").dispatchEvent(event);
 }
 
 test("calculateCost returns the four expected costs per kilometer", () => {
@@ -88,6 +101,165 @@ test("calculateCost rejects negative fuel prices", () => {
 
 test("calculateCost rejects non-finite inputs", () => {
   assert.throws(() => calculateCost(Infinity, 13, 7.2, 8.5, 5.89, 3.99), RangeError);
+});
+
+test("calculateTrip returns liters, cost and tank requirements for all fuels and routes", () => {
+  const trip = calculateTrip(...validValues, 1200, 50);
+
+  assert.equal(trip.distance_km, 1200);
+  assert.equal(trip.tank_capacity_liters, 50);
+  assert.equal(trip.scenarios.length, 4);
+  const gasCity = trip.scenarios.find(({ fuel, route }) => fuel === "Gasolina" && route === "Cidade");
+  assert.equal(gasCity.liters, 1200 / 10.5);
+  assert.equal(gasCity.cost, (1200 / 10.5) * 5.89);
+  assert.equal(gasCity.tank_equivalents, (1200 / 10.5) / 50);
+  assert.equal(gasCity.full_tanks_required, 3);
+  assert.equal(gasCity.refuel_stops_if_full, 2);
+  assert.equal(gasCity.refuel_stops_if_full, 2);
+});
+
+test("calculateTrip accepts zero fuel prices and reports no trip cost", () => {
+  const trip = calculateTrip(10, 12, 7, 8, 0, 0, 100, 40);
+
+  assert.equal(trip.scenarios[0].cost, 0);
+  assert.equal(trip.scenarios[0].liters, 10);
+});
+
+for (const [id, distance, tankCapacity] of [
+  ["zero-distance", 0, 50],
+  ["negative-distance", -10, 50],
+  ["zero-tank-capacity", 320, 0],
+  ["invalid-tank-capacity", 320, NaN],
+]) {
+  test(`calculateTrip rejects ${id}`, () => {
+    assert.throws(() => calculateTrip(...validValues, distance, tankCapacity));
+  });
+}
+
+test("trip button stays disabled until all six comparison and two trip fields are valid", () => {
+  const dom = createCalculator();
+  const document = dom.window.document;
+  const button = document.querySelector("#trip-submit");
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+
+  fillForm(dom, validValues.slice(0, 5));
+  fillTripInputs(dom);
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+
+  fillForm(dom);
+  document.querySelector('[name="price_per_liter_alcool"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.equal(button.getAttribute("aria-disabled"), "false");
+
+  document.querySelector('[name="trip_distance_km"]').value = "0";
+  document.querySelector('[name="trip_distance_km"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+});
+
+test("comparison button stays disabled until all six fields are filled with valid values", () => {
+  const dom = createCalculator();
+  const document = dom.window.document;
+  const button = document.querySelector('#comparison-form button[type="submit"]');
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+
+  fillForm(dom, validValues.slice(0, 5));
+  document.querySelector('[name="price_per_liter_alcool"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+
+  fillForm(dom);
+  document.querySelector('[name="price_per_liter_alcool"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.equal(button.getAttribute("aria-disabled"), "false");
+
+  document.querySelector('[name="km_per_liter_gas_city"]').value = "0";
+  document.querySelector('[name="km_per_liter_gas_city"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.equal(button.getAttribute("aria-disabled"), "true");
+});
+
+test("cost comparison works without trip inputs and keeps the trip calculator below it", () => {
+  const dom = createCalculator();
+  fillForm(dom);
+  submitForm(dom);
+
+  const document = dom.window.document;
+  assert.equal(document.querySelector("#result").hidden, false);
+  assert.equal(document.querySelector("#trip-result").hidden, true);
+  assert.equal(document.querySelector("#trip-submit").getAttribute("aria-disabled"), "true");
+  assert.ok(document.querySelector("#comparison-form").compareDocumentPosition(document.querySelector("#trip-form"))
+    & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
+});
+
+test("attempting comparison with incomplete fields shows a muted validation message", () => {
+  const dom = createCalculator();
+  const document = dom.window.document;
+
+  document.querySelector('#comparison-form button[type="submit"]').click();
+
+  assert.equal(document.querySelector('#comparison-form button[type="submit"]').getAttribute("aria-disabled"), "true");
+  assert.equal(document.querySelector("#form-error").hidden, false);
+  assert.match(document.querySelector("#form-error").textContent, /seis campos/i);
+  assert.equal(document.querySelector("#result").hidden, true);
+
+  fillForm(dom);
+  document.querySelector('[name="price_per_liter_alcool"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.equal(document.querySelector("#form-error").hidden, true);
+});
+
+test("attempting trip calculation without trip inputs shows guidance below its button", () => {
+  const dom = createCalculator();
+  const document = dom.window.document;
+  fillForm(dom);
+  document.querySelector('[name="price_per_liter_alcool"]').dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+  document.querySelector("#trip-submit").click();
+
+  assert.equal(document.querySelector("#trip-submit").getAttribute("aria-disabled"), "true");
+  assert.equal(document.querySelector("#trip-error").hidden, false);
+  assert.match(document.querySelector("#trip-error").textContent, /distância|tanque/i);
+  assert.equal(document.querySelector("#trip-result").hidden, true);
+
+  fillTripInputs(dom);
+  assert.equal(document.querySelector("#trip-error").hidden, true);
+});
+
+test("trip calculation displays original comparison and a four-scenario trip report below it", () => {
+  const dom = createCalculator();
+  fillForm(dom);
+  fillTripInputs(dom, "1200", "50");
+  let comparisonActionRanBeforeTrip = false;
+  dom.window.document.querySelector("#comparison-form").addEventListener("submit", () => {
+    comparisonActionRanBeforeTrip = !dom.window.document.querySelector("#result").hidden;
+  });
+  submitTripForm(dom);
+
+  const document = dom.window.document;
+  const reportColumn = document.querySelector(".report-column");
+  assert.equal(document.querySelector("#result").hidden, false);
+  assert.equal(document.querySelector("#trip-result").hidden, false);
+  assert.equal(document.querySelector("#report-empty").hidden, true);
+  assert.equal(document.querySelectorAll("#trip-scenarios .trip-scenario").length, 4);
+  assert.equal(document.querySelector("#trip-distance-summary").textContent, "1.200,00 km de percurso · tanque de 50,00 L");
+  assert.match(document.querySelector("#trip-scenarios").textContent, /Gasolina · Cidade/);
+  assert.match(document.querySelector("#trip-scenarios").textContent, /Etanol · Estrada/);
+  assert.match(document.querySelector("#trip-scenarios").textContent, /Paradas para abastecer\*/);
+  assert.equal(comparisonActionRanBeforeTrip, true);
+  assert.ok(document.querySelector("#result").compareDocumentPosition(document.querySelector("#trip-result"))
+    & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
+  assert.equal(reportColumn.lastElementChild.id, "trip-result");
+});
+
+test("trip calculation reports an error and hides results when an input becomes invalid", () => {
+  const dom = createCalculator();
+  fillForm(dom);
+  fillTripInputs(dom, "320", "50");
+  submitTripForm(dom);
+
+  const distanceInput = dom.window.document.querySelector('[name="trip_distance_km"]');
+  distanceInput.value = "-1";
+  distanceInput.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  submitTripForm(dom);
+
+  assert.equal(dom.window.document.querySelector("#trip-result").hidden, true);
+  assert.equal(dom.window.document.querySelector("#trip-error").hidden, false);
+  assert.match(dom.window.document.querySelector("#trip-error").textContent, /maiores que zero/i);
 });
 
 test("form submission renders costs and highlights each winner", () => {
